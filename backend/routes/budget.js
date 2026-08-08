@@ -1,6 +1,8 @@
 import express from "express";
-import prisma from "../prisma.js";
+import prisma from "../config/prisma.js";
 import auth from "../middleware/auth.js";
+
+const router = express.Router();
 
 //get al the budget
 
@@ -209,3 +211,5 @@ router.delete("/api/budget/:id", auth, async (req, res) => {
     });
   } catch (error) {}
 });
+
+export default router;

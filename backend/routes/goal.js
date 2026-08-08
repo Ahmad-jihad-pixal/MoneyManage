@@ -1,5 +1,5 @@
 import express from "express";
-import prisma from "../prisma.js";
+import prisma from "../config/prisma.js";
 import auth from "../middleware/auth.js";
 import { getGoalSavedAmount } from "../utils/ getGoalSavedAmount.js";
 
