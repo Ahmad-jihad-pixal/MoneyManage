@@ -3,7 +3,11 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 const adapter = new PrismaMariaDb({
-  url: process.env.DATABASE_URL,
+  host: "localhost",
+  port: 3306,
+  user: "root",
+  password: "Ahmad056",
+  database: "MoneyManageDB",
 });
 
 const prisma = new PrismaClient({ adapter });

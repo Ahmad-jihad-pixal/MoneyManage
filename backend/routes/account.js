@@ -66,6 +66,7 @@ router.post("/api/accounts", auth, async (req, res) => {
       data: {
         name,
         balance: openingBalance,
+        openingBalance,
         userId: req.user.id,
       },
     });

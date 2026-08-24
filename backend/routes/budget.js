@@ -8,8 +8,9 @@ const router = express.Router();
 
 router.get("/api/budget", auth, async (req, res) => {
   try {
+    //deletedAt:null so soft-deleted budgets don't reappear in the list
     const budgets = await prisma.budget.findMany({
-      where: { userId: req.user.id },
+      where: { userId: req.user.id, deletedAt: null },
     });
 
     const budgetsWithProgress = await Promise.all(
@@ -56,48 +57,45 @@ router.get("/api/budget/:id", auth, async (req, res) => {
   const budgetId = parseInt(id);
 
   if (isNaN(budgetId)) {
-    return res.status(400).json({ message: "inavalid budget id " });
+    return res.status(400).json({ message: "invalid budget id" });
+  }
 
-    try {
-      const budgetExsit = await prisma.budget.findFirst({
-        where: { id: budgetId, userId: req.user.id },
-      });
+  try {
+    const budgetExsit = await prisma.budget.findFirst({
+      where: { id: budgetId, userId: req.user.id, deletedAt: null },
+    });
 
-      if (!budgetExsit) {
-        return res.status(404).json({ message: "budget not found" });
-      }
-      const activeCycle = await prisma.budgetCycle.findFirst({
-        where: { id: budgetExsit.id, status: "ACTIVE" },
-      });
-
-      const spentAmount = activeCycle ? Number(activeCycle.spentAmount) : 0;
-      const amount = Number(budget.amount);
-
-      const remaining = amount - spentAmount;
-      const progress = amount > 0 ? (spentAmount / amount) * 100 : 0;
-
-      let daysRemaining = null;
-      if (activeCycle) {
-        //turn milliseconds to days
-        const msPerDay = 1000 * 60 * 60 * 24;
-        daysRemaining = Math.ceil(
-          //givesthe difference between them in milliseconds
-          //new Date object representing right now
-          (new Date(activeCycle.endDate) - new Date()) / msPerDay,
-        );
-      }
-
-      res.status(200).json({
-        ...budget,
-        activeCycle,
-        spentAmount,
-        remaining,
-        progress,
-        daysRemaining,
-      });
-    } catch (error) {
-      res.status(500).json({ message: "error fetch budget" });
+    if (!budgetExsit) {
+      return res.status(404).json({ message: "budget not found" });
     }
+
+    const activeCycle = await prisma.budgetCycle.findFirst({
+      where: { budgetId: budgetExsit.id, status: "ACTIVE" },
+    });
+
+    const spentAmount = activeCycle ? Number(activeCycle.spentAmount) : 0;
+    const amount = Number(budgetExsit.amount);
+    const remaining = amount - spentAmount;
+    const progress = amount > 0 ? (spentAmount / amount) * 100 : 0;
+
+    let daysRemaining = null;
+    if (activeCycle) {
+      const msPerDay = 1000 * 60 * 60 * 24;
+      daysRemaining = Math.ceil(
+        (new Date(activeCycle.endDate) - new Date()) / msPerDay,
+      );
+    }
+
+    res.status(200).json({
+      ...budgetExsit,
+      activeCycle,
+      spentAmount,
+      remaining,
+      progress,
+      daysRemaining,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "error fetch budget" });
   }
 });
 
@@ -119,7 +117,7 @@ router.post("/api/budget", auth, async (req, res) => {
     }
 
     //calculate the first cycle's end date, based on period
-    const start = new Date(startDate);
+    const start = startDate ? new Date(startDate) : new Date();
     let endDate = new Date(start);
 
     if (period === "WEEKLY") {
@@ -176,7 +174,7 @@ router.put("/api/budget/:id", auth, async (req, res) => {
   }
   try {
     const budgetExsit = await prisma.budget.findFirst({
-      where: { id: budgetId, userId: req.user.id },
+      where: { id: budgetId, userId: req.user.id, deletedAt: null },
     });
 
     if (!budgetExsit) {
@@ -207,9 +205,18 @@ router.delete("/api/budget/:id", auth, async (req, res) => {
   }
   try {
     const budgetExsit = await prisma.budget.findFirst({
-      where: { id: budgetId, userId: req.user.id },
+      where: { id: budgetId, userId: req.user.id, deletedAt: null },
     });
-  } catch (error) {}
+    if (!budgetExsit) {
+      return res.status(404).json({ message: "budget not found" });
+    }
+    await prisma.budget.update({
+      where: { id: budgetExsit.id },
+      data: { deletedAt: new Date() },
+    });
+    res.status(200).json({ message: "budget deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete budget" });
+  }
 });
-
 export default router;

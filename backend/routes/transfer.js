@@ -72,6 +72,13 @@ router.post("/api/transfer", auth, async (req, res) => {
       return res.status(404).json({ message: "Destination account not found" });
     }
 
+    //never let a transfer push the source account balance below zero
+    if (Number(fromAccountExisting.balance) - amount < 0) {
+      return res.status(400).json({
+        message: "This transfer would leave the source account balance below zero",
+      });
+    }
+
     const transfarFromAccount = prisma.account.update({
       where: { id: fromAccountExisting.id },
       data: { balance: { decrement: amount } },
@@ -86,7 +93,7 @@ router.post("/api/transfer", auth, async (req, res) => {
         fromAccountId: fromAccountExisting.id,
         toAccountId: toAccountExisting.id,
         amount,
-        date,
+        date: new Date(date),
       },
     });
 
@@ -95,6 +102,7 @@ router.post("/api/transfer", auth, async (req, res) => {
     const results = await prisma.$transaction(operations);
     res.status(201).json(results[0]);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to make a new transfer" });
   }
 });
@@ -134,6 +142,40 @@ router.put("/api/transfer/:id", auth, async (req, res) => {
     if (!toAccountExisting) {
       return res.status(404).json({ message: "Destination account not found" });
     }
+
+    //never let editing a transfer push any touched account balance below zero.
+    //accumulate the net balance change per account id, since the same account
+    //could be touched by both the "from" and "to" side of the edit.
+    const deltas = {};
+    const addDelta = (accId, delta) => {
+      deltas[accId] = (deltas[accId] ?? 0) + delta;
+    };
+
+    if (existing.fromAccountId !== fromAccountId) {
+      addDelta(existing.fromAccountId, Number(existing.amount));
+      addDelta(fromAccountId, -Number(amount));
+    } else {
+      addDelta(fromAccountId, -(Number(amount) - Number(existing.amount)));
+    }
+
+    if (existing.toAccountId !== toAccountId) {
+      addDelta(existing.toAccountId, -Number(existing.amount));
+      addDelta(toAccountId, Number(amount));
+    } else {
+      addDelta(toAccountId, Number(amount) - Number(existing.amount));
+    }
+
+    const touchedAccounts = await prisma.account.findMany({
+      where: { id: { in: Object.keys(deltas).map(Number) } },
+    });
+    for (const acc of touchedAccounts) {
+      if (Number(acc.balance) + deltas[acc.id] < 0) {
+        return res.status(400).json({
+          message: "This change would leave an account balance below zero",
+        });
+      }
+    }
+
     //array to use $trasaction
     let balanceOps = [];
     //oldFromAccount !==newFromAccount
@@ -185,7 +227,7 @@ router.put("/api/transfer/:id", auth, async (req, res) => {
 
     const transferUpdate = prisma.transfer.update({
       where: { id: transferId },
-      data: { fromAccountId, toAccountId, amount, date },
+      data: { fromAccountId, toAccountId, amount, date: new Date(date) },
     });
 
     const operations = [transferUpdate, ...balanceOps];
@@ -196,3 +238,5 @@ router.put("/api/transfer/:id", auth, async (req, res) => {
     res.status(500).json({ message: "Failed to update transfer" });
   }
 });
+
+export default router;

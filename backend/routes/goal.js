@@ -1,8 +1,8 @@
 import express from "express";
 import prisma from "../config/prisma.js";
 import auth from "../middleware/auth.js";
-import { getGoalSavedAmount } from "../utils/ getGoalSavedAmount.js";
-
+import { getGoalSavedAmount } from "../utils/getGoalSavedAmount.js";
+const router = express.Router();
 //get all goals
 router.get("/api/goal", auth, async (req, res) => {
   try {
@@ -118,7 +118,12 @@ router.delete("/api/goal/:id", auth, async (req, res) => {
     const savedAmount = await getGoalSavedAmount(goalExsit.id);
 
     if (savedAmount > 0) {
-      return res.status(400).json({ message: "the goal account is not empty" });
+      return res
+        .status(400)
+        .json({
+          message:
+            "the goal account is not empty withdraw the money to account first ",
+        });
     }
 
     await prisma.goal.update({
@@ -178,13 +183,21 @@ router.post("/api/goal/:id/transfer", auth, async (req, res) => {
         .status(400)
         .json({ message: "the amount+saved > goal target ,no more transfer" });
     }
+
+    //never let moving money INTO a goal push the source account balance below zero
+    if (type === "IN" && Number(accountExsit.balance) - amount < 0) {
+      return res.status(400).json({
+        message: "This transfer would leave the account balance below zero",
+      });
+    }
+
     const createGoalTransfer = prisma.goalTransfer.create({
       data: {
         goalId: goalExsit.id,
         accountId: accountExsit.id,
         amount,
         type,
-        date,
+        date: new Date(date),
         note,
       },
     });
@@ -235,3 +248,5 @@ router.get("/api/goal/:id/goaltransfer", auth, async (req, res) => {
     res.status(500).json({ message: "goalTransfer not found" });
   }
 });
+
+export default router;

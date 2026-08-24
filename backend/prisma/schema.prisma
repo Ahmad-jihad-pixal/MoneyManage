@@ -4,7 +4,8 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -66,6 +67,7 @@ model Account {
   userId        Int
   name          String
   balance       Decimal        @db.Decimal(12, 2)
+  openingBalance Decimal       @default(0) @db.Decimal(12, 2)
   user          User           @relation(fields: [userId], references: [id])
   deletedAt     DateTime?
   transactions  Transaction[]

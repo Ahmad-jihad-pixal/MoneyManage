@@ -93,11 +93,19 @@ router.post("/api/transaction", auth, async (req, res) => {
     });
     if (!account) {
       return res.status(404).json({
-        message: "account not found",
+        //account not found
+        message: "select an account  ",
       });
     }
     //for culc balance and budgetmath
     const signedAmount = getSignedAmount(amount, category.type);
+
+    //never let a transaction push the account balance below zero
+    if (Number(account.balance) + signedAmount < 0) {
+      return res.status(400).json({
+        message: "This transaction would leave the account balance below zero",
+      });
+    }
 
     // Step 5: find the active BudgetCycle for this category, if one exists.
     // Only relevant for expenses — income never affects budget spending.
@@ -108,6 +116,7 @@ router.post("/api/transaction", auth, async (req, res) => {
         where: {
           categoryId: category.id,
           userId: req.user.id,
+          deletedAt: null,
         },
       });
       //If yes, you then find the active cycle
@@ -127,7 +136,7 @@ router.post("/api/transaction", auth, async (req, res) => {
         categoryId: category.id,
         accountId: account.id,
         amount,
-        date,
+        date: new Date(date),
         note,
       },
     });
@@ -222,6 +231,31 @@ router.put("/api/transaction/:id", auth, async (req, res) => {
     const newSignedAmount = getSignedAmount(amount, category.type);
 
     const accountChange = existing.accountId !== account.id;
+
+    //never let an edit push either affected account's balance below zero
+    if (!accountChange) {
+      const projectedBalance =
+        Number(account.balance) + (newSignedAmount - oldSignedAmount);
+      if (projectedBalance < 0) {
+        return res.status(400).json({
+          message:
+            "This transaction would leave the account balance below zero",
+        });
+      }
+    } else {
+      const oldAccountRecord = await prisma.account.findFirst({
+        where: { id: existing.accountId },
+      });
+      const projectedOldBalance =
+        Number(oldAccountRecord.balance) - oldSignedAmount;
+      const projectedNewBalance = Number(account.balance) + newSignedAmount;
+      if (projectedOldBalance < 0 || projectedNewBalance < 0) {
+        return res.status(400).json({
+          message: "This transaction would leave an account balance below zero",
+        });
+      }
+    }
+
     let balanceOp = [];
     //case1 if the account id the same
     if (!accountChange) {
@@ -256,6 +290,7 @@ router.put("/api/transaction/:id", auth, async (req, res) => {
         where: {
           categoryId: oldCategory.id,
           userId: req.user.id,
+          deletedAt: null,
         },
       });
       //If yes, you then find the active cycle if there one
@@ -274,7 +309,7 @@ router.put("/api/transaction/:id", auth, async (req, res) => {
     let newActiveCycle = null;
     if (category.type === "EXPENSE") {
       const newBudget = await prisma.budget.findFirst({
-        where: { categoryId: category.id, userId: req.user.id },
+        where: { categoryId: category.id, userId: req.user.id, deletedAt: null },
       });
       if (newBudget) {
         newActiveCycle = await prisma.budgetCycle.findFirst({
@@ -329,7 +364,7 @@ router.put("/api/transaction/:id", auth, async (req, res) => {
         categoryId: category.id,
         accountId: account.id,
         amount,
-        date,
+        date: new Date(date),
         note,
       },
     });
@@ -380,7 +415,7 @@ router.delete("/api/transaction/:id", auth, async (req, res) => {
     let oldActiveCycle = null;
     if (oldCategory.type === "EXPENSE") {
       const oldBudget = await prisma.budget.findFirst({
-        where: { categoryId: oldCategory.id, userId: req.user.id },
+        where: { categoryId: oldCategory.id, userId: req.user.id, deletedAt: null },
       });
       if (oldBudget) {
         oldActiveCycle = await prisma.budgetCycle.findFirst({
@@ -420,3 +455,4 @@ router.delete("/api/transaction/:id", auth, async (req, res) => {
     res.status(500).json({ message: "Failed to delete transaction" });
   }
 });
+export default router;

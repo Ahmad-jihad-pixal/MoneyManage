@@ -87,20 +87,27 @@ router.put("/api/category/:id", auth, async (req, res) => {
   }
   try {
     const existingCategory = await prisma.category.findFirst({
-      where: {
-        id: categoryId,
-        userId: req.user.id,
-        deletedAt: null,
-      },
+      where: { id: categoryId, deletedAt: null },
     });
+
     if (!existingCategory) {
       return res.status(404).json({ message: "Category not found" });
     }
+
+    if (existingCategory.userId === null) {
+      return res
+        .status(403)
+        .json({ message: "Default categories cannot be modified" });
+    }
+
+    if (existingCategory.userId !== req.user.id) {
+      return res.status(403).json({ message: "You don't own this category" });
+    }
+
     const category = await prisma.category.update({
       where: {
         id: categoryId,
       },
-
       data: {
         name,
         type,
@@ -129,11 +136,45 @@ router.delete("/api/category/:id", auth, async (req, res) => {
   }
   try {
     const existingCategory = await prisma.category.findFirst({
-      where: { id: categoryId, userId: req.user.id, deletedAt: null },
+      where: { id: categoryId, deletedAt: null },
     });
+
     if (!existingCategory) {
-      return res.status(404).json({ message: "category not found " });
+      return res.status(404).json({ message: "Category not found" });
     }
+
+    if (existingCategory.userId === null) {
+      return res
+        .status(403)
+        .json({ message: "Default categories cannot be modified" });
+    }
+
+    if (existingCategory.userId !== req.user.id) {
+      return res.status(403).json({ message: "You don't own this category" });
+    }
+
+    //can't delete a parent while it still has (non-deleted) subcategories
+    const childCount = await prisma.category.count({
+      where: { parentId: categoryId, deletedAt: null },
+    });
+    if (childCount > 0) {
+      return res.status(400).json({
+        message: "Delete the subcategories first",
+      });
+    }
+
+    //can't delete a category that a live budget still tracks — the budget's
+    //spentAmount is derived from this category's transactions, so it would be
+    //left pointing at something the user can no longer see.
+    const budgetCount = await prisma.budget.count({
+      where: { categoryId, userId: req.user.id, deletedAt: null },
+    });
+    if (budgetCount > 0) {
+      return res.status(400).json({
+        message: "Delete the budget linked to this category first",
+      });
+    }
+
     await prisma.category.update({
       where: {
         id: categoryId,
