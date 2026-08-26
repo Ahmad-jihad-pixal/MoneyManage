@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Pencil } from '@lucide/vue'
 import { useAccountStore } from '@/stores/accountStore.js'
+import { accountValidate } from '@/lib/validation'
 
 const props = defineProps({
     account: {
@@ -26,12 +27,21 @@ const props = defineProps({
 const store = useAccountStore()
 const name = ref(props.account.name)
 const open = ref(false)
+const errors = ref({})
 
 watch(() => props.account.name, (newName) => {
     name.value = newName
 })
 
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
+
 const submit = async () => {
+    errors.value = accountValidate(name.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.updateAccount(props.account.id, name.value)
     if (ok) open.value = false
 }
@@ -55,7 +65,9 @@ const submit = async () => {
                 <div class="grid gap-4">
                     <div class="grid gap-3">
                         <Label for="name">Name</Label>
-                        <Input id="name" v-model="name" placeholder="New name" />
+                        <p v-if="errors.name" class="text-destructive text-sm font-medium">{{ errors.name }}</p>
+                        <Input id="name" v-model="name" placeholder="New name" :aria-invalid="!!errors.name"
+                            :class="errors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                     </div>
                 </div>
                 <DialogFooter class="mt-4">

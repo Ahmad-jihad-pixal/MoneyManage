@@ -118,12 +118,10 @@ router.delete("/api/goal/:id", auth, async (req, res) => {
     const savedAmount = await getGoalSavedAmount(goalExsit.id);
 
     if (savedAmount > 0) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "the goal account is not empty withdraw the money to account first ",
-        });
+      return res.status(400).json({
+        message:
+          "the goal account is not empty withdraw the money to account first ",
+      });
     }
 
     await prisma.goal.update({
@@ -187,7 +185,7 @@ router.post("/api/goal/:id/transfer", auth, async (req, res) => {
     //never let moving money INTO a goal push the source account balance below zero
     if (type === "IN" && Number(accountExsit.balance) - amount < 0) {
       return res.status(400).json({
-        message: "This transfer would leave the account balance below zero",
+        message: "the amount is begger than the amount in the goal",
       });
     }
 

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCategoryStore } from '@/stores/categoryStore'
+import { categoryValidate } from '@/lib/validation'
 
 const store = useCategoryStore()
 const { name, type, parentId } = storeToRefs(store)
@@ -22,8 +23,17 @@ const eligibleParents = computed(() =>
 )
 
 const open = ref(false)
+const errors = ref({})
+
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
 
 const submit = async () => {
+    errors.value = categoryValidate(name.value, type.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.createCategory()
     if (ok) open.value = false
 }
@@ -55,12 +65,15 @@ const submit = async () => {
                     <div class="grid gap-4">
                         <div class="grid gap-3">
                             <Label for="name"> Name</Label>
-                            <Input id="name" v-model="name" placeholder="Coffee runs" />
+                            <p v-if="errors.name" class="text-destructive text-sm font-medium">{{ errors.name }}</p>
+                            <Input id="name" v-model="name" placeholder="Coffee runs" :aria-invalid="!!errors.name"
+                                :class="errors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                         </div>
 
 
                         <div class="grid gap-3">
                             <label class="text-sm font-medium">Type</label>
+                            <p v-if="errors.type" class="text-destructive text-sm font-medium">{{ errors.type }}</p>
                             <Tabs v-model="type" class="w-full" default-value="EXPENSE">
                                 <TabsList class="w-full">
                                     <TabsTrigger value="EXPENSE" class="flex-1">

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -30,6 +30,7 @@ import { storeToRefs } from 'pinia'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { useAccountStore } from '@/stores/accountStore'
 import { useTransactionStore } from '@/stores/transactionStore'
+import { transactionValidate } from '@/lib/validation'
 
 defineProps({
     label: {
@@ -42,7 +43,7 @@ const categoryStore = useCategoryStore()
 const accountStore = useAccountStore()
 
 const store = useTransactionStore()
-const { accountId, categoryId, amount, date, note } = storeToRefs(store)
+const { accountId, categoryId, amount, date } = storeToRefs(store)
 
 // Track active transaction type tab
 const transactionType = ref('expense')
@@ -50,8 +51,21 @@ const transactionType = ref('expense')
 const filteredCategories = computed(() => categoryStore.categories.filter((c) => c.type === transactionType.value.toUpperCase()))
 
 const open = ref(false)
+const errors = ref({})
+
+//don't leave old errors on screen when the dialog is reopened, or when
+//switching between the Expense and Income tabs
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
+watch(transactionType, () => {
+    errors.value = {}
+})
 
 const submit = async () => {
+    errors.value = transactionValidate(accountId.value, categoryId.value, amount.value, date.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.createTransaction()
     if (ok) open.value = false
 }
@@ -89,8 +103,11 @@ const submit = async () => {
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-3">
                                 <Label for="expense-account">Account</Label>
+                                <p v-if="errors.accountId" class="text-destructive text-sm font-medium">
+                                    {{ errors.accountId }}</p>
                                 <Select v-model="accountId">
-                                    <SelectTrigger id="expense-account" class="w-full">
+                                    <SelectTrigger id="expense-account" class="w-full"
+                                        :class="errors.accountId ? 'border-destructive' : ''">
                                         <SelectValue placeholder="Select account" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -106,8 +123,11 @@ const submit = async () => {
 
                             <div class="grid gap-3">
                                 <Label for="expense-category">Expense Category</Label>
+                                <p v-if="errors.categoryId" class="text-destructive text-sm font-medium">
+                                    {{ errors.categoryId }}</p>
                                 <Select v-model="categoryId">
-                                    <SelectTrigger id="expense-category" class="w-full">
+                                    <SelectTrigger id="expense-category" class="w-full"
+                                        :class="errors.categoryId ? 'border-destructive' : ''">
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -124,32 +144,27 @@ const submit = async () => {
 
                         <div class="grid gap-3">
                             <Label for="expense-amount">Amount</Label>
+                            <p v-if="errors.amount" class="text-destructive text-sm font-medium">{{ errors.amount }}</p>
                             <Input placeholder="0.00" v-model="amount" type="number" min="0" step="0.01"
-                                id="expense-amount" />
+                                id="expense-amount" :aria-invalid="!!errors.amount"
+                                :class="errors.amount ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div class="grid gap-3">
-                                <Label>Date</Label>
-                                <Popover>
-                                    <PopoverTrigger as-child>
-                                        <Button variant="outline"
-                                            class="w-full justify-start text-left font-normal">
-                                            <CalendarIcon class="mr-2 size-4" />
-                                            {{ date ? date : 'Pick a date' }}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent class="w-auto p-0">
-                                        <Calendar v-model="date" />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <div class="grid gap-3">
-                                <Label for="expense-note">Note (optional)</Label>
-                                <Input id="expense-note" v-model="note" placeholder="Grocery shopping"
-                                    type="text" />
-                            </div>
+                        <div class="grid gap-3">
+                            <Label>Date</Label>
+                            <p v-if="errors.date" class="text-destructive text-sm font-medium">{{ errors.date }}</p>
+                            <Popover>
+                                <PopoverTrigger as-child>
+                                    <Button variant="outline" class="w-full justify-start text-left font-normal"
+                                        :class="errors.date ? 'border-destructive' : ''">
+                                        <CalendarIcon class="mr-2 size-4" />
+                                        {{ date ? date : 'Pick a date' }}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-auto p-0">
+                                    <Calendar v-model="date" />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </TabsContent>
 
@@ -158,8 +173,11 @@ const submit = async () => {
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="grid gap-3">
                                 <Label for="income-account">Account</Label>
+                                <p v-if="errors.accountId" class="text-destructive text-sm font-medium">
+                                    {{ errors.accountId }}</p>
                                 <Select v-model="accountId">
-                                    <SelectTrigger id="income-account" class="w-full">
+                                    <SelectTrigger id="income-account" class="w-full"
+                                        :class="errors.accountId ? 'border-destructive' : ''">
                                         <SelectValue placeholder="Select account" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -175,8 +193,11 @@ const submit = async () => {
 
                             <div class="grid gap-3">
                                 <Label for="income-category">Income Source</Label>
+                                <p v-if="errors.categoryId" class="text-destructive text-sm font-medium">
+                                    {{ errors.categoryId }}</p>
                                 <Select v-model="categoryId">
-                                    <SelectTrigger id="income-category" class="w-full">
+                                    <SelectTrigger id="income-category" class="w-full"
+                                        :class="errors.categoryId ? 'border-destructive' : ''">
                                         <SelectValue placeholder="Select source" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -193,31 +214,27 @@ const submit = async () => {
 
                         <div class="grid gap-3">
                             <Label for="income-amount">Amount</Label>
+                            <p v-if="errors.amount" class="text-destructive text-sm font-medium">{{ errors.amount }}</p>
                             <Input placeholder="0.00" v-model="amount" type="number" min="0" step="0.01"
-                                id="income-amount" />
+                                id="income-amount" :aria-invalid="!!errors.amount"
+                                :class="errors.amount ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div class="grid gap-3">
-                                <Label>Date</Label>
-                                <Popover>
-                                    <PopoverTrigger as-child>
-                                        <Button variant="outline"
-                                            class="w-full justify-start text-left font-normal">
-                                            <CalendarIcon class="mr-2 size-4" />
-                                            {{ date ? date : 'Pick a date' }}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent class="w-auto p-0">
-                                        <Calendar v-model="date" />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <div class="grid gap-3">
-                                <Label for="income-note">Note (optional)</Label>
-                                <Input id="income-note" v-model="note" placeholder="Monthly paycheck" type="text" />
-                            </div>
+                        <div class="grid gap-3">
+                            <Label>Date</Label>
+                            <p v-if="errors.date" class="text-destructive text-sm font-medium">{{ errors.date }}</p>
+                            <Popover>
+                                <PopoverTrigger as-child>
+                                    <Button variant="outline" class="w-full justify-start text-left font-normal"
+                                        :class="errors.date ? 'border-destructive' : ''">
+                                        <CalendarIcon class="mr-2 size-4" />
+                                        {{ date ? date : 'Pick a date' }}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-auto p-0">
+                                    <Calendar v-model="date" />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </TabsContent>
 

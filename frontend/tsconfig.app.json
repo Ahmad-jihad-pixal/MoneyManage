@@ -3,6 +3,12 @@
   "include": ["env.d.ts", "src/**/*", "src/**/*.vue"],
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
+    // This app is mostly plain JS (all the Pinia stores, most SFCs) with only a few
+    // `lang="ts"` files. Without allowJs, every TS file importing a .js module fails
+    // with TS7016 "implicitly has an 'any' type". `checkJs` stays off, so the JS is
+    // read for type inference but not itself type-checked.
+    "allowJs": true,
+
     // Extra safety for array and object lookups, but may have false positives.
     "noUncheckedIndexedAccess": true,
 

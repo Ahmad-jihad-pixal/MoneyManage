@@ -23,18 +23,28 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { useBudgetStore } from '@/stores/budgetStore'
+import { budgetValidate } from '@/lib/validation'
 
 const categoryStore = useCategoryStore()
 const store = useBudgetStore()
 const { categoryId, amount, period, autoReset } = storeToRefs(store)
 
 const open = ref(false)
+const errors = ref({})
+
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
 
 const submit = async () => {
+    errors.value = budgetValidate(categoryId.value, amount.value, period.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.createBudget()
     if (ok) open.value = false
 }
@@ -68,8 +78,10 @@ const submit = async () => {
                     <div class="grid gap-4">
                         <div class="grid gap-3">
                             <label class="text-sm font-medium">Category</label>
+                            <p v-if="errors.categoryId" class="text-destructive text-sm font-medium">
+                                {{ errors.categoryId }}</p>
                             <Select v-model="categoryId">
-                                <SelectTrigger class="w-full">
+                                <SelectTrigger class="w-full" :class="errors.categoryId ? 'border-destructive' : ''">
                                     <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -90,15 +102,21 @@ const submit = async () => {
                             <!-- 1st label -->
                             <div class="grid gap-3">
                                 <Label for="number ">Target amount</Label>
+                                <p v-if="errors.amount" class="text-destructive text-sm font-medium">{{ errors.amount }}
+                                </p>
                                 <Input placeholder="0.00" v-model="amount" type="number" min="0" step="0.01"
-                                    id="number" />
+                                    id="number" :aria-invalid="!!errors.amount"
+                                    :class="errors.amount ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                             </div>
 
                             <!-- 2nd label  -->
                             <div class="grid gap-3">
                                 <label class="text-sm font-medium">period</label>
+                                <p v-if="errors.period" class="text-destructive text-sm font-medium">{{ errors.period }}
+                                </p>
                                 <Select v-model="period">
-                                    <SelectTrigger class="w-full">
+                                    <SelectTrigger class="w-full"
+                                        :class="errors.period ? 'border-destructive' : ''">
                                         <SelectValue placeholder="Select period" />
                                     </SelectTrigger>
                                     <SelectContent>

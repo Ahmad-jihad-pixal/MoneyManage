@@ -64,7 +64,33 @@ const router = createRouter({
       name: 'signup',
       component: signup,
     },
+    //anything unrecognised goes home, where the guard below decides what happens
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
+})
+
+//the only two pages a signed-out visitor may see
+const PUBLIC_ROUTES = ['login', 'signup']
+
+router.beforeEach((to) => {
+  //read sessionStorage directly rather than going through the Pinia store: the store
+  //calls useRouter() during setup, which needs an injection context that navigation
+  //guards don't have. This is the same value the store initialises itself from.
+  const isLoggedIn = !!sessionStorage.getItem('token')
+  const isPublic = PUBLIC_ROUTES.includes(to.name)
+
+  //signed out and heading for an app page -> send to login
+  if (!isLoggedIn && !isPublic) {
+    return { name: 'login' }
+  }
+
+  //already signed in -> no reason to sit on login/signup again
+  if (isLoggedIn && isPublic) {
+    return { name: 'dashboard' }
+  }
 })
 
 export default router

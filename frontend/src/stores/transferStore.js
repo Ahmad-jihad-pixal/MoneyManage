@@ -13,7 +13,7 @@ export const useTransferStore = defineStore('transfer', () => {
 
   const fetchTransfer = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/transfer', {
+      const response = await fetch('/api/transfer', {
         headers: {
           Authorization: `Bearer ${authStore.token}`,
         },
@@ -28,7 +28,7 @@ export const useTransferStore = defineStore('transfer', () => {
   //create  transfer
   const createTransfer = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/transfer', {
+      const response = await fetch('/api/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,6 +51,9 @@ export const useTransferStore = defineStore('transfer', () => {
       transfer.value.push(data)
       toast.success('Transfer created')
 
+      fromAccount.value = null
+      toAccount.value = null
+      amount.value = null
       return data
     } catch (error) {
       console.error('Error creating transfer:', error)

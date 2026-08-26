@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Pencil } from '@lucide/vue'
 import { useCategoryStore } from '@/stores/categoryStore'
+import { categoryValidate } from '@/lib/validation'
 
 const props = defineProps({
     category: {
@@ -26,12 +27,22 @@ const props = defineProps({
 const store = useCategoryStore()
 const name = ref(props.category.name)
 const open = ref(false)
+const errors = ref({})
 
 watch(() => props.category.name, (newName) => {
     name.value = newName
 })
 
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
+
 const submit = async () => {
+    //type isn't editable here, so pass the existing one to keep it valid
+    errors.value = categoryValidate(name.value, props.category.type)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.updateCategory(props.category.id, name.value)
     if (ok) open.value = false
 }
@@ -55,7 +66,10 @@ const submit = async () => {
                 <div class="grid gap-4">
                     <div class="grid gap-3">
                         <Label for="category-name">Name</Label>
-                        <Input id="category-name" v-model="name" placeholder="Category name" />
+                        <p v-if="errors.name" class="text-destructive text-sm font-medium">{{ errors.name }}</p>
+                        <Input id="category-name" v-model="name" placeholder="Category name"
+                            :aria-invalid="!!errors.name"
+                            :class="errors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                     </div>
                 </div>
                 <DialogFooter class="mt-4">

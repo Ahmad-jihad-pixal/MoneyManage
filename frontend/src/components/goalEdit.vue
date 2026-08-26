@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Pencil } from '@lucide/vue'
 import { useGoalStore } from '@/stores/goalStore'
+import { goalValidate } from '@/lib/validation'
 
 const props = defineProps({
     goal: {
@@ -27,13 +28,22 @@ const store = useGoalStore()
 const name = ref(props.goal.name)
 const targetAmount = ref(props.goal.targetAmount)
 const open = ref(false)
+const errors = ref({})
 
 watch(() => props.goal, (g) => {
     name.value = g.name
     targetAmount.value = g.targetAmount
 })
 
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
+
 const submit = async () => {
+    errors.value = goalValidate(name.value, targetAmount.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.updateGoal(props.goal.id, name.value, targetAmount.value)
     if (ok) open.value = false
 }
@@ -57,11 +67,17 @@ const submit = async () => {
                 <div class="grid gap-4">
                     <div class="grid gap-3">
                         <Label for="goal-name">Name</Label>
-                        <Input id="goal-name" v-model="name" placeholder="Goal name" />
+                        <p v-if="errors.name" class="text-destructive text-sm font-medium">{{ errors.name }}</p>
+                        <Input id="goal-name" v-model="name" placeholder="Goal name" :aria-invalid="!!errors.name"
+                            :class="errors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                     </div>
                     <div class="grid gap-3">
                         <Label for="goal-target">Target amount</Label>
-                        <Input id="goal-target" v-model="targetAmount" type="number" min="0" step="0.01" />
+                        <p v-if="errors.targetAmount" class="text-destructive text-sm font-medium">
+                            {{ errors.targetAmount }}</p>
+                        <Input id="goal-target" v-model="targetAmount" type="number" min="0" step="0.01"
+                            :aria-invalid="!!errors.targetAmount"
+                            :class="errors.targetAmount ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                     </div>
                 </div>
                 <DialogFooter class="mt-4">

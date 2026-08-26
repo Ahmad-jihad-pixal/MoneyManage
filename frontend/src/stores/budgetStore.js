@@ -13,7 +13,7 @@ export const useBudgetStore = defineStore('budget', () => {
 
   const fetchBudget = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/budget', {
+      const response = await fetch('/api/budget', {
         headers: {
           Authorization: `Bearer ${authStore.token}`,
         },
@@ -29,7 +29,7 @@ export const useBudgetStore = defineStore('budget', () => {
 
   const createBudget = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/budget', {
+      const response = await fetch('/api/budget', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const useBudgetStore = defineStore('budget', () => {
 
   const deleteBudget = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/budget/${id}`, {
+      const response = await fetch(`/api/budget/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })

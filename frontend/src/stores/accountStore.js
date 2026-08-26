@@ -12,7 +12,7 @@ export const useAccountStore = defineStore('accounts', () => {
   // fetch all acoount from bd via api
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/accounts', {
+      const response = await fetch('/api/accounts', {
         headers: {
           Authorization: `Bearer ${authStore.token}`,
         },
@@ -29,7 +29,7 @@ export const useAccountStore = defineStore('accounts', () => {
 
   const createAccount = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/accounts', {
+      const response = await fetch('/api/accounts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export const useAccountStore = defineStore('accounts', () => {
   //update account name
   const updateAccount = async (id, newName) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/accounts/${id}`, {
+      const response = await fetch(`/api/accounts/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export const useAccountStore = defineStore('accounts', () => {
   //delete account
   const deleteAccount = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/accounts/${id}`, {
+      const response = await fetch(`/api/accounts/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${authStore.token}`,

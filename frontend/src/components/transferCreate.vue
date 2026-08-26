@@ -25,17 +25,27 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { CalendarIcon } from '@lucide/vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAccountStore } from '@/stores/accountStore'
 import { useTransferStore } from '@/stores/transferStore.js'
+import { transferValidate } from '@/lib/validation'
 const accountStore = useAccountStore()
 const store = useTransferStore()
 const { fromAccount, toAccount, amount, date } = storeToRefs(store)
 
 const open = ref(false)
+const errors = ref({})
+
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
 
 const submit = async () => {
+    errors.value = transferValidate(fromAccount.value, toAccount.value, amount.value, date.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.createTransfer()
     if (ok) open.value = false
 }
@@ -66,8 +76,11 @@ const submit = async () => {
                     <div class="grid gap-4">
                         <div class="grid gap-3">
                             <Label for="from-account">From</Label>
+                            <p v-if="errors.fromAccount" class="text-destructive text-sm font-medium">
+                                {{ errors.fromAccount }}</p>
                             <Select v-model="fromAccount">
-                                <SelectTrigger id="from-account" class="w-full">
+                                <SelectTrigger id="from-account" class="w-full"
+                                    :class="errors.fromAccount ? 'border-destructive' : ''">
                                     <SelectValue placeholder="Select source account" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -81,8 +94,11 @@ const submit = async () => {
                         </div>
                         <div class="grid gap-3">
                             <Label for="to-account">To</Label>
+                            <p v-if="errors.toAccount" class="text-destructive text-sm font-medium">
+                                {{ errors.toAccount }}</p>
                             <Select v-model="toAccount">
-                                <SelectTrigger id="to-account" class="w-full">
+                                <SelectTrigger id="to-account" class="w-full"
+                                    :class="errors.toAccount ? 'border-destructive' : ''">
                                     <SelectValue placeholder="Select destination account" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -100,15 +116,20 @@ const submit = async () => {
                             <!-- 1st label  -->
                             <div class="grid gap-3">
                                 <Label for="number ">Amount</Label>
+                                <p v-if="errors.amount" class="text-destructive text-sm font-medium">{{ errors.amount }}
+                                </p>
                                 <Input placeholder="0,00" v-model="amount" type="number" min="0" step="0.01"
-                                    id="number" />
+                                    id="number" :aria-invalid="!!errors.amount"
+                                    :class="errors.amount ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                             </div>
 
                             <div class="grid gap-3">
                                 <label class="text-sm font-medium">Date</label>
+                                <p v-if="errors.date" class="text-destructive text-sm font-medium">{{ errors.date }}</p>
                                 <Popover>
                                     <PopoverTrigger as-child>
-                                        <Button variant="outline" class="w-full justify-start text-left font-normal">
+                                        <Button variant="outline" class="w-full justify-start text-left font-normal"
+                                            :class="errors.date ? 'border-destructive' : ''">
                                             <CalendarIcon class="mr-2 size-4" />
                                             {{ date ? date : 'Pick a date' }}
                                         </Button>

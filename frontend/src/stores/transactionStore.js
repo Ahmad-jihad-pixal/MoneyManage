@@ -9,7 +9,6 @@ export const useTransactionStore = defineStore('Transactions', () => {
   const categoryId = ref()
   const accountId = ref()
   const amount = ref()
-  const note = ref()
   const date = ref()
 
   //  fetch all Transactions, optionally filtered
@@ -23,7 +22,7 @@ export const useTransactionStore = defineStore('Transactions', () => {
       const query = params.toString()
 
       const response = await fetch(
-        `http://localhost:3000/api/transaction${query ? `?${query}` : ''}`,
+        `/api/transaction${query ? `?${query}` : ''}`,
         {
           headers: { Authorization: `Bearer ${authStore.token}` },
         },
@@ -38,7 +37,7 @@ export const useTransactionStore = defineStore('Transactions', () => {
   //create transaction
   const createTransaction = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/transaction', {
+      const response = await fetch('/api/transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({
@@ -46,7 +45,6 @@ export const useTransactionStore = defineStore('Transactions', () => {
           accountId: accountId.value,
           amount: amount.value,
           date: new Date(date.value.toString()).toISOString(),
-          note: note.value,
         }),
       })
       const data = await response.json()
@@ -58,7 +56,6 @@ export const useTransactionStore = defineStore('Transactions', () => {
       accountId.value = null
       amount.value = null
       date.value = null
-      note.value = null
       toast.success('Transaction created')
       return true
     } catch (error) {
@@ -71,7 +68,7 @@ export const useTransactionStore = defineStore('Transactions', () => {
   //delete transaction
   const deleteTransaction = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/transaction/${id}`, {
+      const response = await fetch(`/api/transaction/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -93,7 +90,6 @@ export const useTransactionStore = defineStore('Transactions', () => {
     categoryId,
     accountId,
     amount,
-    note,
     date,
     fetchTransactions,
     createTransaction,

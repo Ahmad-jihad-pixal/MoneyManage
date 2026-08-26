@@ -278,6 +278,24 @@ utilities at the usage sites (no shadcn primitives in `components/ui/` were modi
   description wrapping to three lines) — now stacks below `sm` with a full-width CTA. Transfer
   rows were also tightened so the account names no longer wrap onto two lines.
 
+Route guard:
+
+- **`router.beforeEach` now locks the app down.** A visitor without a token can only reach `/login`
+  and `/signup`; every other route redirects to `/login`. Conversely, someone already signed in is
+  bounced off `/login`/`/signup` to the dashboard. Added a `/:pathMatch(.*)*` catch-all too, so an
+  unknown URL redirects home instead of rendering a blank layout.
+- The guard reads `sessionStorage` directly rather than going through the Pinia store. `authStore`
+  calls `useRouter()` during setup, which needs an injection context that navigation guards don't
+  have — instantiating the store from inside a guard would leave its `router` undefined. Since the
+  store initialises its own `token` from `sessionStorage`, the two can't disagree.
+- **This required fixing Sign Out.** It was a plain `RouterLink to="/login"` that never cleared the
+  token, so with the guard in place it would have bounced straight back to the dashboard. It now
+  calls the existing `authStore.logout()`, which clears `sessionStorage`, resets `token`, and
+  redirects.
+
+> Note this is a **UX** guard, not a security boundary — it only hides the UI. The real protection is
+> the `auth` middleware on every API route, which is what actually refuses unauthenticated requests.
+
 Auth forms (login + signup):
 
 - **Both forms silently swallowed every failure.** Each only acted `if (response.ok)`, so a wrong
@@ -332,8 +350,6 @@ Functional fixes:
 
 - **No API base URL config.** Every store hardcodes `http://localhost:3000`. Fine for local dev,
   but there's nothing to change for a deployed backend without editing every store file.
-- **No route guards.** Visiting any page while logged out just renders empty instead of
-  redirecting to `/login`.
 - **Budget editing has no UI.** Delete is wired but there's no edit dialog, though
   `PUT /api/budget/:id` exists.
 - **Transfer editing/deleting has no UI.** `PUT /api/transfer/:id` exists but there's no

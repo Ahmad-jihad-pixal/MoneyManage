@@ -12,7 +12,7 @@ export const useCategoryStore = defineStore('categories', () => {
 
   const fetchCategory = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/category', {
+      const response = await fetch('/api/category', {
         headers: {
           Authorization: `Bearer ${authStore.token}`,
         },
@@ -26,7 +26,7 @@ export const useCategoryStore = defineStore('categories', () => {
 
   const createCategory = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/category', {
+      const response = await fetch('/api/category', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export const useCategoryStore = defineStore('categories', () => {
   const updateCategory = async (id, newName) => {
     try {
       const existing = categories.value.find((c) => c.id === id)
-      const response = await fetch(`http://localhost:3000/api/category/${id}`, {
+      const response = await fetch(`/api/category/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ export const useCategoryStore = defineStore('categories', () => {
   //delete category
   const deleteCategory = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/category/${id}`, {
+      const response = await fetch(`/api/category/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })

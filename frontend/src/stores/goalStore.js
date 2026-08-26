@@ -16,7 +16,7 @@ export const useGoalStore = defineStore('goal', () => {
 
   const fetchGoal = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/goal', {
+      const response = await fetch('/api/goal', {
         headers: {
           Authorization: `Bearer ${authStore.token}`,
         },
@@ -33,7 +33,7 @@ export const useGoalStore = defineStore('goal', () => {
 
   const createGoal = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/goal', {
+      const response = await fetch('/api/goal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export const useGoalStore = defineStore('goal', () => {
   // make trsfer to goal
   const moveGoalMoney = async (goalId) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/goal/${goalId}/transfer`, {
+      const response = await fetch(`/api/goal/${goalId}/transfer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export const useGoalStore = defineStore('goal', () => {
   //update goal name/target
   const updateGoal = async (id, newName, newTargetAmount) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/goal/${id}`, {
+      const response = await fetch(`/api/goal/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ export const useGoalStore = defineStore('goal', () => {
   //fetch a goal's transfer history
   const fetchGoalHistory = async (goalId) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/goal/${goalId}/goaltransfer`, {
+      const response = await fetch(`/api/goal/${goalId}/goaltransfer`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (!response.ok) throw new Error('Failed to fetch goal history')
@@ -145,7 +145,7 @@ export const useGoalStore = defineStore('goal', () => {
   //delete goal
   const deleteGoal = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/goal/${id}`, {
+      const response = await fetch(`/api/goal/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })

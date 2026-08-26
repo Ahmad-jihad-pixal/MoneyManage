@@ -13,18 +13,27 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAccountStore } from '@/stores/accountStore'
+import { accountValidate } from '@/lib/validation'
 
 const store = useAccountStore()
 const { name, balance } = storeToRefs(store)
 
 const open = ref(false)
+const errors = ref({})
 
+//don't leave old errors on screen when the dialog is reopened
+watch(open, (isOpen) => {
+    if (!isOpen) errors.value = {}
+})
 
 //to close the dialog auto after submet
 const submit = async () => {
+    errors.value = accountValidate(name.value, balance.value)
+    if (Object.keys(errors.value).length > 0) return
+
     const ok = await store.createAccount()
     if (ok) open.value = false
 }
@@ -59,11 +68,17 @@ const submit = async () => {
                     <div class="grid gap-4">
                         <div class="grid gap-3">
                             <Label for="name"> Name</Label>
-                            <Input id="name" v-model="name" placeholder="account name " />
+                            <p v-if="errors.name" class="text-destructive text-sm font-medium">{{ errors.name }}</p>
+                            <Input id="name" v-model="name" placeholder="account name " :aria-invalid="!!errors.name"
+                                :class="errors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                         </div>
                         <div class="grid gap-3">
                             <Label for="number ">Opening balance (optional)</Label>
-                            <Input placeholder="0,00" v-model="balance" type="number" id="number" />
+                            <p v-if="errors.balance" class="text-destructive text-sm font-medium">{{ errors.balance }}
+                            </p>
+                            <Input placeholder="0,00" v-model="balance" type="number" id="number"
+                                :aria-invalid="!!errors.balance"
+                                :class="errors.balance ? 'border-destructive focus-visible:ring-destructive/30' : ''" />
                         </div>
                     </div>
                     <DialogFooter class="mt-4">
